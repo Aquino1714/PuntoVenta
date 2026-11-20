@@ -38,7 +38,7 @@ Aplicacion movil de Punto de venta diseñada para administrar ventas, inventario
 
 ## Reglas
 
-* ** No subir nada en la rama main hasta que el programa sea estable y losto para maquetar
+* ** No subir nada en la rama main hasta que el programa sea estable y listo para maquetar
 * ** Usar la rama *dev* donde se probaran los modulos antes de pasar a main
 
 -------
