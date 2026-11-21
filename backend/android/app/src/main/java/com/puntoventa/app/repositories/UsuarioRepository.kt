@@ -14,12 +14,9 @@ class UsuarioRepository(
 
         val cursor = db.rawQuery(
             """
-            SELECT
-                usuario_id,
-                usuario_correo,
-                usuario_password,
-                usuario_rol,
-                usuario_activo
+            SELECT usuario_id, usuario_correo, usuario_password,
+                   rol_id, usuario_activo, usuario_nombre,
+                   usuario_apellido, usuario_nombre_usuario
             FROM usuarios
             ORDER BY usuario_id
             """.trimIndent(),
@@ -33,8 +30,11 @@ class UsuarioRepository(
                         id = it.getInt(0),
                         correo = it.getString(1),
                         password = it.getString(2),
-                        rol = it.getString(3),
-                        activo = it.getInt(4)
+                        rolId = it.getInt(3),
+                        activo = it.getInt(4),
+                        nombre = it.getString(5),
+                        apellido = it.getString(6),
+                        nombreUsuario = it.getString(7)
                     )
                 )
             }
@@ -48,12 +48,9 @@ class UsuarioRepository(
 
         val cursor = db.rawQuery(
             """
-            SELECT
-                usuario_id,
-                usuario_correo,
-                usuario_password,
-                usuario_rol,
-                usuario_activo
+            SELECT usuario_id, usuario_correo, usuario_password,
+                   rol_id, usuario_activo, usuario_nombre,
+                   usuario_apellido, usuario_nombre_usuario
             FROM usuarios
             WHERE usuario_correo = ?
             LIMIT 1
@@ -67,8 +64,11 @@ class UsuarioRepository(
                     id = it.getInt(0),
                     correo = it.getString(1),
                     password = it.getString(2),
-                    rol = it.getString(3),
-                    activo = it.getInt(4)
+                    rolId = it.getInt(3),
+                    activo = it.getInt(4),
+                    nombre = it.getString(5),
+                    apellido = it.getString(6),
+                    nombreUsuario = it.getString(7)
                 )
             }
         }
