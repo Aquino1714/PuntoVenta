@@ -14,13 +14,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import com.puntoventa.app.database.DatabaseHelper
 import com.puntoventa.app.repositories.AuthRepository
 import com.puntoventa.app.repositories.ResultadoLogin
 import com.puntoventa.app.repositories.ResultadoRegistro
 import com.puntoventa.app.services.Permisos
 import com.puntoventa.app.ui.theme.PuntoVentaTheme
+import com.puntoventa.app.screens.EmpleadosScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -33,6 +49,8 @@ class MainActivity : ComponentActivity() {
             PuntoVentaTheme {
 
                 var pantalla by remember { mutableStateOf("inicio") }
+                var moduloSeleccionado by remember { mutableStateOf("Inicio") }
+
                 var correo by remember { mutableStateOf("") }
                 var usuario by remember { mutableStateOf("") }
                 var password by remember { mutableStateOf("") }
@@ -40,6 +58,8 @@ class MainActivity : ComponentActivity() {
                 var apellido by remember { mutableStateOf("") }
                 var apellidoMaterno by remember { mutableStateOf("") }
                 var confirmarPassword by remember { mutableStateOf("") }
+
+                var mostrarPasswordLogin by remember { mutableStateOf(false) }
 
                 var mensaje by remember { mutableStateOf("") }
                 var registroExitoso by remember { mutableStateOf(false) }
@@ -60,6 +80,8 @@ class MainActivity : ComponentActivity() {
                     usuario = ""
                     password = ""
                     mensaje = ""
+                    moduloSeleccionado = "Inicio"
+                    mostrarPasswordLogin = false
                     pantalla = "inicio"
                 }
 
@@ -87,6 +109,8 @@ class MainActivity : ComponentActivity() {
                                 rolSesion = resultado.rolId
                                 password = ""
                                 mensaje = ""
+                                moduloSeleccionado = "Inicio"
+                                mostrarPasswordLogin = false
                                 pantalla = "menu"
                             }
                         }
@@ -208,17 +232,20 @@ class MainActivity : ComponentActivity() {
 
                         when (pantalla) {
 
+                            // INICIO
                             "inicio" -> {
                                 Text(
                                     "MY BUSINESS",
                                     style = MaterialTheme.typography.headlineLarge
                                 )
 
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(16.dp))
+
                                 Text("Todos tus negocios en una App")
 
-                                Spacer(Modifier.height(40.dp))
-                                Text("¿Eres dueño de un negocio?")
+                                Spacer(Modifier.height(32.dp))
+
+                                Text("¿Eres administrador?")
 
                                 Spacer(Modifier.height(12.dp))
 
@@ -229,7 +256,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("Iniciar sesión")
+                                    Text("Iniciar sesión como administrador")
                                 }
 
                                 OutlinedButton(
@@ -243,7 +270,8 @@ class MainActivity : ComponentActivity() {
                                     Text("Crear cuenta")
                                 }
 
-                                Spacer(Modifier.height(32.dp))
+                                Spacer(Modifier.height(24.dp))
+
                                 Text("¿Eres empleado?")
 
                                 Spacer(Modifier.height(12.dp))
@@ -259,6 +287,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            // LOGIN ADMINISTRADOR
                             "admin" -> {
                                 Text(
                                     "Iniciar sesión",
@@ -285,7 +314,23 @@ class MainActivity : ComponentActivity() {
                                     onValueChange = { password = it },
                                     label = { Text("Contraseña") },
                                     singleLine = true,
-                                    visualTransformation = PasswordVisualTransformation(),
+                                    visualTransformation = if (mostrarPasswordLogin)
+                                        VisualTransformation.None
+                                    else
+                                        PasswordVisualTransformation(),
+                                    trailingIcon = {
+                                        IconButton(onClick = {
+                                            mostrarPasswordLogin = !mostrarPasswordLogin
+                                        }) {
+                                            Icon(
+                                                imageVector = if (mostrarPasswordLogin)
+                                                    Icons.Filled.VisibilityOff
+                                                else
+                                                    Icons.Filled.Visibility,
+                                                contentDescription = "Mostrar u ocultar contraseña"
+                                            )
+                                        }
+                                    },
                                     modifier = Modifier.fillMaxWidth()
                                 )
 
@@ -330,6 +375,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // REGISTRO ADMINISTRADOR
                             "registro" -> {
                                 Text(
                                     "Crear cuenta",
@@ -348,9 +394,7 @@ class MainActivity : ComponentActivity() {
                                     singleLine = true,
                                     isError = errorNombre.isNotEmpty(),
                                     supportingText = {
-                                        if (errorNombre.isNotEmpty()) {
-                                            Text(errorNombre)
-                                        }
+                                        if (errorNombre.isNotEmpty()) Text(errorNombre)
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -367,9 +411,7 @@ class MainActivity : ComponentActivity() {
                                     singleLine = true,
                                     isError = errorApellido.isNotEmpty(),
                                     supportingText = {
-                                        if (errorApellido.isNotEmpty()) {
-                                            Text(errorApellido)
-                                        }
+                                        if (errorApellido.isNotEmpty()) Text(errorApellido)
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -386,9 +428,7 @@ class MainActivity : ComponentActivity() {
                                     singleLine = true,
                                     isError = errorApellidoMaterno.isNotEmpty(),
                                     supportingText = {
-                                        if (errorApellidoMaterno.isNotEmpty()) {
-                                            Text(errorApellidoMaterno)
-                                        }
+                                        if (errorApellidoMaterno.isNotEmpty()) Text(errorApellidoMaterno)
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -405,9 +445,7 @@ class MainActivity : ComponentActivity() {
                                     singleLine = true,
                                     isError = errorCorreo.isNotEmpty(),
                                     supportingText = {
-                                        if (errorCorreo.isNotEmpty()) {
-                                            Text(errorCorreo)
-                                        }
+                                        if (errorCorreo.isNotEmpty()) Text(errorCorreo)
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     keyboardOptions = KeyboardOptions(
@@ -427,9 +465,7 @@ class MainActivity : ComponentActivity() {
                                     singleLine = true,
                                     isError = errorPassword.isNotEmpty(),
                                     supportingText = {
-                                        if (errorPassword.isNotEmpty()) {
-                                            Text(errorPassword)
-                                        }
+                                        if (errorPassword.isNotEmpty()) Text(errorPassword)
                                     },
                                     visualTransformation = PasswordVisualTransformation(),
                                     modifier = Modifier.fillMaxWidth()
@@ -447,9 +483,7 @@ class MainActivity : ComponentActivity() {
                                     singleLine = true,
                                     isError = errorConfirmarPassword.isNotEmpty(),
                                     supportingText = {
-                                        if (errorConfirmarPassword.isNotEmpty()) {
-                                            Text(errorConfirmarPassword)
-                                        }
+                                        if (errorConfirmarPassword.isNotEmpty()) Text(errorConfirmarPassword)
                                     },
                                     visualTransformation = PasswordVisualTransformation(),
                                     modifier = Modifier.fillMaxWidth()
@@ -507,6 +541,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            // LOGIN EMPLEADO
                             "empleado" -> {
                                 Text(
                                     "Acceso de empleado",
@@ -530,7 +565,23 @@ class MainActivity : ComponentActivity() {
                                     onValueChange = { password = it },
                                     label = { Text("Contraseña") },
                                     singleLine = true,
-                                    visualTransformation = PasswordVisualTransformation(),
+                                    visualTransformation = if (mostrarPasswordLogin)
+                                        VisualTransformation.None
+                                    else
+                                        PasswordVisualTransformation(),
+                                    trailingIcon = {
+                                        IconButton(onClick = {
+                                            mostrarPasswordLogin = !mostrarPasswordLogin
+                                        }) {
+                                            Icon(
+                                                imageVector = if (mostrarPasswordLogin)
+                                                    Icons.Filled.VisibilityOff
+                                                else
+                                                    Icons.Filled.Visibility,
+                                                contentDescription = "Mostrar u ocultar contraseña"
+                                            )
+                                        }
+                                    },
                                     modifier = Modifier.fillMaxWidth()
                                 )
 
@@ -560,9 +611,9 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // MENU PRINCIPAL
                             "menu" -> {
-                                val esAdmin =
-                                    Permisos.esAdministrador(rolSesion)
+                                val esAdmin = Permisos.esAdministrador(rolSesion)
 
                                 Text(
                                     "¡Bienvenido!",
@@ -571,58 +622,153 @@ class MainActivity : ComponentActivity() {
 
                                 Spacer(Modifier.height(8.dp))
                                 Text(correoSesion)
+                                Text(if (esAdmin) "Administrador" else "Empleado")
+
+                                Spacer(Modifier.height(24.dp))
 
                                 Text(
-                                    if (esAdmin) "Administrador"
-                                    else "Empleado"
-                                )
-
-                                Spacer(Modifier.height(32.dp))
-
-                                Text(
-                                    "Menú principal",
+                                    moduloSeleccionado,
                                     style = MaterialTheme.typography.titleLarge
                                 )
 
                                 Spacer(Modifier.height(16.dp))
 
-                                val modulos = if (esAdmin) {
-                                    listOf(
-                                        "Usuarios",
-                                        "Negocios",
-                                        "Productos e inventario",
-                                        "Ventas",
-                                        "Clientes",
-                                        "Finanzas",
-                                        "Reportes"
-                                    )
-                                } else {
-                                    listOf(
-                                        "Productos e inventario",
-                                        "Ventas"
-                                    )
-                                }
+                                when (moduloSeleccionado) {
 
-                                modulos.forEach { modulo ->
-                                    OutlinedButton(
-                                        onClick = {
-                                            mensaje = "$modulo: módulo en desarrollo"
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(modulo)
+                                    "Inicio" -> {
+                                        Text("Todos tus negocios en una App")
+                                        Text("Selecciona una sección desde el menú inferior.")
+                                    }
+
+                                    "Usuarios" -> {
+                                        Text("Administración de usuarios")
+
+                                        Button(
+                                            onClick = {
+                                                pantalla = "empleados"
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.People,
+                                                contentDescription = null
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Gestionar empleados")
+                                        }
+                                    }
+
+                                    "Negocios" -> {
+                                        Text("Gestión de negocios: módulo en desarrollo")
+                                    }
+
+                                    "Productos" -> {
+                                        Text("Productos e inventario: módulo en desarrollo")
+                                    }
+
+                                    "Ventas" -> {
+                                        Text("Ventas: módulo en desarrollo")
+                                    }
+
+                                    "Más" -> {
+                                        if (esAdmin) {
+                                            val otrosModulos = listOf(
+                                                "Clientes",
+                                                "Finanzas",
+                                                "Reportes"
+                                            )
+
+                                            otrosModulos.forEach { modulo ->
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        mensaje = "$modulo: módulo en desarrollo"
+                                                    },
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text(modulo)
+                                                }
+                                            }
+                                        } else {
+                                            Text("No hay más opciones disponibles.")
+                                        }
+                                    }
+
+                                    "Perfil" -> {
+                                        Text("Tu cuenta")
+                                        Text(correoSesion)
+
+                                        Button(
+                                            onClick = { cerrarSesion() },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Cerrar sesión")
+                                        }
+                                    }
+
+                                    else -> {
+                                        Text("$moduloSeleccionado: módulo en desarrollo")
                                     }
                                 }
 
-                                Spacer(Modifier.height(16.dp))
+                                Spacer(Modifier.height(12.dp))
                                 Text(mensaje)
 
-                                Button(
-                                    onClick = { cerrarSesion() },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Cerrar sesión")
+                                NavigationBar {
+                                    val opciones = if (esAdmin) {
+                                        listOf(
+                                            "Inicio",
+                                            "Usuarios",
+                                            "Negocios",
+                                            "Más"
+                                        )
+                                    } else {
+                                        listOf(
+                                            "Inicio",
+                                            "Productos",
+                                            "Ventas",
+                                            "Perfil"
+                                        )
+                                    }
+
+                                    val iconos = mapOf(
+                                        "Inicio" to Icons.Filled.Home,
+                                        "Usuarios" to Icons.Filled.People,
+                                        "Negocios" to Icons.Filled.Store,
+                                        "Productos" to Icons.Filled.Inventory,
+                                        "Ventas" to Icons.Filled.ShoppingCart,
+                                        "Más" to Icons.Filled.MoreHoriz,
+                                        "Perfil" to Icons.Filled.Person
+                                    )
+
+                                    opciones.forEach { opcion ->
+                                        NavigationBarItem(
+                                            selected = moduloSeleccionado == opcion,
+                                            onClick = {
+                                                moduloSeleccionado = opcion
+                                                mensaje = ""
+                                            },
+                                            icon = {
+                                                Icon(
+                                                    imageVector = iconos[opcion]
+                                                        ?: Icons.Filled.Home,
+                                                    contentDescription = opcion
+                                                )
+                                            },
+                                            label = { Text(opcion) }
+                                        )
+                                    }
                                 }
+                            }
+
+                            // EMPLEADOS
+                            "empleados" -> {
+                                EmpleadosScreen(
+                                    onRegresar = {
+                                        pantalla = "menu"
+                                        moduloSeleccionado = "Usuarios"
+                                        mensaje = ""
+                                    }
+                                )
                             }
                         }
                     }

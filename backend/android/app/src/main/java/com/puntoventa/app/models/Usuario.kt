@@ -9,5 +9,6 @@ data class Usuario(
     val activo: Int,
     val nombre: String?,
     val apellido: String?,
+    val apellidoMaterno: String?,
     val nombreUsuario: String?
 )
