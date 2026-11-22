@@ -55,20 +55,23 @@ class AuthRepository(
         apellido: String,
         apellidoMaterno: String,
         correo: String,
-        password: String
+        password: String,
+        nombreNegocio: String
     ): ResultadoRegistro {
 
         val nombreLimpio = nombre.trim()
         val apellidoLimpio = apellido.trim()
         val apellidoMaternoLimpio = apellidoMaterno.trim()
         val correoLimpio = correo.trim().lowercase()
+        val negocioLimpio = nombreNegocio.trim()
 
         if (
             nombreLimpio.isBlank() ||
             apellidoLimpio.isBlank() ||
             apellidoMaternoLimpio.isBlank() ||
             correoLimpio.isBlank() ||
-            password.isBlank()
+            password.isBlank() ||
+            negocioLimpio.isBlank()
         ) {
             return ResultadoRegistro.Error("Todos los campos son obligatorios")
         }
@@ -149,7 +152,8 @@ class AuthRepository(
                 )
             }
 
-            val valores = ContentValues().apply {
+            // 1. Crear administrador
+            val valoresUsuario = ContentValues().apply {
                 put("usuario_correo", correoLimpio)
                 put("usuario_password", password)
                 put("rol_id", 1)
@@ -159,16 +163,56 @@ class AuthRepository(
                 put("usuario_apellido_materno", apellidoMaternoLimpio)
             }
 
-            val nuevoId = db.insert("usuarios", null, valores)
+            val nuevoId = db.insert("usuarios", null, valoresUsuario)
 
             if (nuevoId == -1L) {
-                return ResultadoRegistro.Error("No se pudo crear la cuenta")
+                return ResultadoRegistro.Error(
+                    "No se pudo crear la cuenta"
+                )
+            }
+
+            // 2. Crear negocio principal del administrador
+            val valoresNegocio = ContentValues().apply {
+                put("negocio_nombre_comercial", negocioLimpio)
+                put("negocio_es_principal", 1)
+                put("negocio_activo", 1)
+                put("negocio_propietario_id", nuevoId)
+            }
+
+            val nuevoNegocioId = db.insert(
+                "negocios",
+                null,
+                valoresNegocio
+            )
+
+            if (nuevoNegocioId == -1L) {
+                return ResultadoRegistro.Error(
+                    "No se pudo crear el negocio"
+                )
+            }
+
+            // 3. Relacionar administrador con su negocio
+            val actualizarUsuario = ContentValues().apply {
+                put("negocio_id", nuevoNegocioId)
+            }
+
+            val filasActualizadas = db.update(
+                "usuarios",
+                actualizarUsuario,
+                "usuario_id = ?",
+                arrayOf(nuevoId.toString())
+            )
+
+            if (filasActualizadas != 1) {
+                return ResultadoRegistro.Error(
+                    "No se pudo relacionar el administrador con su negocio"
+                )
             }
 
             db.setTransactionSuccessful()
 
             return ResultadoRegistro.Exitoso(
-                "Primera cuenta de administrador creada correctamente"
+                "Administrador y negocio principal creados correctamente"
             )
 
         } catch (e: Exception) {

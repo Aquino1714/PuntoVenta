@@ -151,6 +151,7 @@ fun EmpleadosScreen(
             value = apellido,
             onValueChange = { apellido = it },
             label = { Text("Apellido paterno") },
+            placeholder = { Text("Ej. Pérez") },
             singleLine = true,
             enabled = negocios.isNotEmpty(),
             modifier = Modifier.fillMaxWidth()
@@ -160,6 +161,7 @@ fun EmpleadosScreen(
             value = apellidoMaterno,
             onValueChange = { apellidoMaterno = it },
             label = { Text("Apellido materno") },
+            placeholder = { Text("Ej. López") },
             singleLine = true,
             enabled = negocios.isNotEmpty(),
             modifier = Modifier.fillMaxWidth()
@@ -169,6 +171,7 @@ fun EmpleadosScreen(
             value = correo,
             onValueChange = { correo = it },
             label = { Text("Correo electrónico") },
+            placeholder = { Text("Ej. empleado@correo.com") },
             singleLine = true,
             enabled = negocios.isNotEmpty(),
             keyboardOptions = KeyboardOptions(
@@ -181,6 +184,7 @@ fun EmpleadosScreen(
             value = nombreUsuario,
             onValueChange = { nombreUsuario = it },
             label = { Text("Nombre de usuario") },
+            placeholder = { Text("Ej. juan123") },
             singleLine = true,
             enabled = negocios.isNotEmpty(),
             modifier = Modifier.fillMaxWidth()
@@ -475,6 +479,7 @@ fun EmpleadosScreen(
                         value = editNombre,
                         onValueChange = { editNombre = it },
                         label = { Text("Nombre") },
+                        placeholder = { Text("Ej. Juan") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -483,6 +488,7 @@ fun EmpleadosScreen(
                         value = editApellido,
                         onValueChange = { editApellido = it },
                         label = { Text("Apellido paterno") },
+                        placeholder = { Text("Ej. Pérez") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -491,6 +497,7 @@ fun EmpleadosScreen(
                         value = editApellidoMaterno,
                         onValueChange = { editApellidoMaterno = it },
                         label = { Text("Apellido materno") },
+                        placeholder = { Text("Ej. López") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -499,6 +506,7 @@ fun EmpleadosScreen(
                         value = editCorreo,
                         onValueChange = { editCorreo = it },
                         label = { Text("Correo electrónico") },
+                        placeholder = { Text("Ej. empleado@correo.com") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -507,6 +515,7 @@ fun EmpleadosScreen(
                         value = editNombreUsuario,
                         onValueChange = { editNombreUsuario = it },
                         label = { Text("Nombre de usuario") },
+                        placeholder = { Text("Ej. juan123") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -530,6 +539,7 @@ fun EmpleadosScreen(
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Negocio asignado") },
+                            placeholder = { Text("Selecciona un negocio") },
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(
                                     expanded = menuEdicionNegociosExpandido
@@ -567,6 +577,7 @@ fun EmpleadosScreen(
                         label = {
                             Text("Nueva contraseña (opcional)")
                         },
+                        placeholder = { Text("Deja vacío para conservar la actual") },
                         singleLine = true,
                         visualTransformation = if (mostrarPasswordEdicion)
                             VisualTransformation.None

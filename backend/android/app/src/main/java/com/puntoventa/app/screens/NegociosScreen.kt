@@ -401,6 +401,7 @@ fun NegociosScreen(
                             }.take(13)
                         },
                         label = { Text("RFC") },
+                        placeholder = { Text("Ej. ABC123456XYZ") },
                         supportingText = {
                             Text("12 caracteres para persona moral o 13 para persona física.")
                         },
@@ -412,6 +413,7 @@ fun NegociosScreen(
                         value = giro,
                         onValueChange = { giro = it },
                         label = { Text("Giro del negocio") },
+                        placeholder = { Text("Ej. Abarrotes, papelería, farmacia") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -422,6 +424,7 @@ fun NegociosScreen(
                             telefono = it.filter { c -> c.isDigit() }.take(10)
                         },
                         label = { Text("Teléfono") },
+                        placeholder = { Text("Ej. 2461234567") },
                         supportingText = {
                             Text("Ingresa 10 dígitos.")
                         },
@@ -436,6 +439,7 @@ fun NegociosScreen(
                         value = correo,
                         onValueChange = { correo = it },
                         label = { Text("Correo electrónico") },
+                        placeholder = { Text("Ej. negocio@correo.com") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email
@@ -447,6 +451,7 @@ fun NegociosScreen(
                         value = direccion,
                         onValueChange = { direccion = it },
                         label = { Text("Dirección") },
+                        placeholder = { Text("Ej. Av. Principal #123, Tlaxcala") },
                         modifier = Modifier.fillMaxWidth()
                     )
 

@@ -4,6 +4,7 @@ package com.puntoventa.app.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
 import java.io.File
 
 class DatabaseHelper(context: Context) :
@@ -12,6 +13,7 @@ class DatabaseHelper(context: Context) :
     companion object {
         private const val DATABASE_NAME = "punto_venta.db"
         private const val DATABASE_VERSION = 3
+        private const val TAG = "MIGRACION_DB"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -23,6 +25,8 @@ class DatabaseHelper(context: Context) :
         oldVersion: Int,
         newVersion: Int
     ) {
+        Log.d(TAG, "Ejecutando migración: $oldVersion -> $newVersion")
+
         if (oldVersion < 3) {
             var existeNegocioId = false
 
@@ -45,8 +49,14 @@ class DatabaseHelper(context: Context) :
                     REFERENCES negocios(negocio_id)
                     """.trimIndent()
                 )
+
+                Log.d(TAG, "Columna negocio_id agregada correctamente")
+            } else {
+                Log.d(TAG, "La columna negocio_id ya existe")
             }
         }
+
+        Log.d(TAG, "Migración finalizada")
     }
 
     init {
@@ -68,7 +78,7 @@ class DatabaseHelper(context: Context) :
     }
 
     override fun onConfigure(db: SQLiteDatabase) {
-        super.onConfigure(db)
-        db.setForeignKeyConstraintsEnabled(true)
-    }
+    super.onConfigure(db)
+    db.setForeignKeyConstraintsEnabled(true)
+}
 }

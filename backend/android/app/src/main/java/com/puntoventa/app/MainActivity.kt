@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,6 +34,8 @@ import com.puntoventa.app.services.Permisos
 import com.puntoventa.app.ui.theme.PuntoVentaTheme
 import com.puntoventa.app.screens.EmpleadosScreen
 import com.puntoventa.app.screens.NegociosScreen
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -49,9 +53,12 @@ class MainActivity : ComponentActivity() {
                 var correo by remember { mutableStateOf("") }
                 var usuario by remember { mutableStateOf("") }
                 var password by remember { mutableStateOf("") }
+
                 var nombre by remember { mutableStateOf("") }
                 var apellido by remember { mutableStateOf("") }
                 var apellidoMaterno by remember { mutableStateOf("") }
+                var nombreNegocio by remember { mutableStateOf("") }
+
                 var confirmarPassword by remember { mutableStateOf("") }
 
                 var mostrarPasswordLogin by remember { mutableStateOf(false) }
@@ -59,6 +66,7 @@ class MainActivity : ComponentActivity() {
 
                 var mensaje by remember { mutableStateOf("") }
                 var registroExitoso by remember { mutableStateOf(false) }
+
                 var correoSesion by remember { mutableStateOf("") }
                 var rolSesion by remember { mutableIntStateOf(0) }
                 var idSesion by remember { mutableIntStateOf(0) }
@@ -66,9 +74,13 @@ class MainActivity : ComponentActivity() {
                 var errorNombre by remember { mutableStateOf("") }
                 var errorApellido by remember { mutableStateOf("") }
                 var errorApellidoMaterno by remember { mutableStateOf("") }
+                var errorNombreNegocio by remember { mutableStateOf("") }
                 var errorCorreo by remember { mutableStateOf("") }
                 var errorPassword by remember { mutableStateOf("") }
                 var errorConfirmarPassword by remember { mutableStateOf("") }
+
+                val scrollRegistro = rememberScrollState()
+                val scope = rememberCoroutineScope()
 
                 fun cerrarSesion() {
                     correoSesion = ""
@@ -123,6 +135,7 @@ class MainActivity : ComponentActivity() {
                     errorNombre = ""
                     errorApellido = ""
                     errorApellidoMaterno = ""
+                    errorNombreNegocio = ""
                     errorCorreo = ""
                     errorPassword = ""
                     errorConfirmarPassword = ""
@@ -146,6 +159,10 @@ class MainActivity : ComponentActivity() {
                         errorApellidoMaterno = "Ingresa tu apellido materno"
                     } else if (!soloLetras.matches(apellidoMaterno.trim())) {
                         errorApellidoMaterno = "Apellido no válido"
+                    }
+
+                    if (nombreNegocio.isBlank()) {
+                        errorNombreNegocio = "Ingresa el nombre de tu negocio"
                     }
 
                     if (correo.isBlank()) {
@@ -176,6 +193,7 @@ class MainActivity : ComponentActivity() {
                     return errorNombre.isEmpty() &&
                             errorApellido.isEmpty() &&
                             errorApellidoMaterno.isEmpty() &&
+                            errorNombreNegocio.isEmpty() &&
                             errorCorreo.isEmpty() &&
                             errorPassword.isEmpty() &&
                             errorConfirmarPassword.isEmpty()
@@ -193,15 +211,18 @@ class MainActivity : ComponentActivity() {
                             apellido = apellido,
                             apellidoMaterno = apellidoMaterno,
                             correo = correo,
-                            password = password
+                            password = password,
+                            nombreNegocio = nombreNegocio
                         )
                     ) {
                         is ResultadoRegistro.Exitoso -> {
                             mensaje = resultado.mensaje
                             registroExitoso = true
+
                             nombre = ""
                             apellido = ""
                             apellidoMaterno = ""
+                            nombreNegocio = ""
                             password = ""
                             confirmarPassword = ""
                         }
@@ -220,9 +241,22 @@ class MainActivity : ComponentActivity() {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .then(
+                                if (pantalla == "registro") {
+                                    Modifier
+                                        .verticalScroll(scrollRegistro)
+                                        .imePadding()
+                                } else {
+                                    Modifier
+                                }
+                            )
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                        verticalArrangement = if (pantalla == "registro") {
+                            Arrangement.Top
+                        } else {
+                            Arrangement.Center
+                        }
                     ) {
 
                         when (pantalla) {
@@ -257,6 +291,10 @@ class MainActivity : ComponentActivity() {
                                         pantalla = "registro"
                                         mensaje = ""
                                         registroExitoso = false
+
+                                        scope.launch {
+                                            scrollRegistro.scrollTo(0)
+                                        }
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -303,6 +341,7 @@ class MainActivity : ComponentActivity() {
                                     value = correo,
                                     onValueChange = { correo = it },
                                     label = { Text("Correo electrónico") },
+                                    placeholder = { Text("Ej. usuario@correo.com") },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                     keyboardOptions = KeyboardOptions(
@@ -316,6 +355,7 @@ class MainActivity : ComponentActivity() {
                                     value = password,
                                     onValueChange = { password = it },
                                     label = { Text("Contraseña") },
+                                    placeholder = { Text("Ingresa tu contraseña") },
                                     singleLine = true,
                                     visualTransformation = if (mostrarPasswordLogin)
                                         VisualTransformation.None
@@ -394,6 +434,7 @@ class MainActivity : ComponentActivity() {
                                         errorNombre = ""
                                     },
                                     label = { Text("Nombre") },
+                                    placeholder = { Text("Ingresa tu nombre") },
                                     singleLine = true,
                                     isError = errorNombre.isNotEmpty(),
                                     supportingText = {
@@ -411,6 +452,7 @@ class MainActivity : ComponentActivity() {
                                         errorApellido = ""
                                     },
                                     label = { Text("Apellido paterno") },
+                                    placeholder = { Text("Ingresa tu apellido paterno") },
                                     singleLine = true,
                                     isError = errorApellido.isNotEmpty(),
                                     supportingText = {
@@ -428,10 +470,31 @@ class MainActivity : ComponentActivity() {
                                         errorApellidoMaterno = ""
                                     },
                                     label = { Text("Apellido materno") },
+                                    placeholder = { Text("Ingresa tu apellido materno") },
                                     singleLine = true,
                                     isError = errorApellidoMaterno.isNotEmpty(),
                                     supportingText = {
                                         if (errorApellidoMaterno.isNotEmpty()) Text(errorApellidoMaterno)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(Modifier.height(10.dp))
+
+                                OutlinedTextField(
+                                    value = nombreNegocio,
+                                    onValueChange = {
+                                        nombreNegocio = it
+                                        errorNombreNegocio = ""
+                                    },
+                                    label = { Text("Nombre de tu negocio") },
+                                    placeholder = { Text("Ej. Mi tienda") },
+                                    singleLine = true,
+                                    isError = errorNombreNegocio.isNotEmpty(),
+                                    supportingText = {
+                                        if (errorNombreNegocio.isNotEmpty()) {
+                                            Text(errorNombreNegocio)
+                                        }
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -445,6 +508,7 @@ class MainActivity : ComponentActivity() {
                                         errorCorreo = ""
                                     },
                                     label = { Text("Correo electrónico") },
+                                    placeholder = { Text("Ej. usuario@correo.com") },
                                     singleLine = true,
                                     isError = errorCorreo.isNotEmpty(),
                                     supportingText = {
@@ -465,6 +529,7 @@ class MainActivity : ComponentActivity() {
                                         errorPassword = ""
                                     },
                                     label = { Text("Contraseña") },
+                                    placeholder = { Text("Mínimo 8 caracteres") },
                                     singleLine = true,
                                     isError = errorPassword.isNotEmpty(),
                                     supportingText = {
@@ -502,6 +567,7 @@ class MainActivity : ComponentActivity() {
                                         errorConfirmarPassword = ""
                                     },
                                     label = { Text("Confirmar contraseña") },
+                                    placeholder = { Text("Repite tu contraseña") },
                                     singleLine = true,
                                     isError = errorConfirmarPassword.isNotEmpty(),
                                     supportingText = {
@@ -576,6 +642,7 @@ class MainActivity : ComponentActivity() {
                                     value = usuario,
                                     onValueChange = { usuario = it },
                                     label = { Text("Nombre de usuario") },
+                                    placeholder = { Text("Ingresa tu nombre de usuario") },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -586,6 +653,7 @@ class MainActivity : ComponentActivity() {
                                     value = password,
                                     onValueChange = { password = it },
                                     label = { Text("Contraseña") },
+                                    placeholder = { Text("Ingresa tu contraseña") },
                                     singleLine = true,
                                     visualTransformation = if (mostrarPasswordLogin)
                                         VisualTransformation.None
