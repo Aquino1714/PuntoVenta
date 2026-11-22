@@ -10,5 +10,6 @@ data class Usuario(
     val nombre: String?,
     val apellido: String?,
     val apellidoMaterno: String?,
-    val nombreUsuario: String?
+    val nombreUsuario: String?,
+    val negocioId: Int?
 )

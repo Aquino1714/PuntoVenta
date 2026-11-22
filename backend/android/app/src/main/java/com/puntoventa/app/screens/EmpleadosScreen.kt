@@ -18,19 +18,42 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.platform.LocalContext
 import com.puntoventa.app.database.DatabaseHelper
 import com.puntoventa.app.repositories.UsuarioRepository
+import com.puntoventa.app.repositories.NegocioRepository
 import com.puntoventa.app.repositories.ResultadoEmpleado
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmpleadosScreen(
+    administradorId: Int,
     onRegresar: () -> Unit
 ) {
     val context = LocalContext.current
 
-    val repository = remember {
+    val usuarioRepository = remember {
         UsuarioRepository(DatabaseHelper(context))
     }
 
-    // Formulario de registro
+    val negocioRepository = remember {
+        NegocioRepository(DatabaseHelper(context))
+    }
+
+    val negocios = remember(administradorId) {
+        negocioRepository.obtenerActivosPorPropietario(administradorId)
+    }
+
+    var negocioSeleccionadoId by remember(negocios) {
+        mutableIntStateOf(negocios.firstOrNull()?.id ?: 0)
+    }
+
+    var menuNegociosExpandido by remember {
+        mutableStateOf(false)
+    }
+
+    val negocioSeleccionado = negocios.firstOrNull {
+        it.id == negocioSeleccionadoId
+    }
+
+    // FORMULARIO
     var nombre by remember { mutableStateOf("") }
     var apellido by remember { mutableStateOf("") }
     var apellidoMaterno by remember { mutableStateOf("") }
@@ -38,7 +61,7 @@ fun EmpleadosScreen(
     var nombreUsuario by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    // Datos de edición
+    // EDICIÓN
     var empleadoEditandoId by remember { mutableStateOf<Int?>(null) }
     var editNombre by remember { mutableStateOf("") }
     var editApellido by remember { mutableStateOf("") }
@@ -46,6 +69,8 @@ fun EmpleadosScreen(
     var editCorreo by remember { mutableStateOf("") }
     var editNombreUsuario by remember { mutableStateOf("") }
     var editPassword by remember { mutableStateOf("") }
+    var editNegocioId by remember { mutableIntStateOf(0) }
+    var menuEdicionNegociosExpandido by remember { mutableStateOf(false) }
 
     var mostrarDialogoEdicion by remember { mutableStateOf(false) }
     var mostrarPassword by remember { mutableStateOf(false) }
@@ -57,12 +82,26 @@ fun EmpleadosScreen(
     var mensajeEdicion by remember { mutableStateOf("") }
     var edicionExitosa by remember { mutableStateOf(false) }
 
-    var empleados by remember {
-        mutableStateOf(repository.buscarEmpleados(""))
+    // EMPLEADOS DEL NEGOCIO SELECCIONADO
+    var empleados by remember(negocioSeleccionadoId) {
+        mutableStateOf(
+            if (negocioSeleccionadoId > 0) {
+                usuarioRepository.buscarEmpleados("", negocioSeleccionadoId)
+            } else {
+                emptyList()
+            }
+        )
     }
 
     fun cargarEmpleados() {
-        empleados = repository.buscarEmpleados(busqueda)
+        empleados = if (negocioSeleccionadoId > 0) {
+            usuarioRepository.buscarEmpleados(
+                busqueda,
+                negocioSeleccionadoId
+            )
+        } else {
+            emptyList()
+        }
     }
 
     fun limpiarFormulario() {
@@ -78,6 +117,7 @@ fun EmpleadosScreen(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -91,6 +131,7 @@ fun EmpleadosScreen(
 
         HorizontalDivider()
 
+        // FORMULARIO DE REGISTRO
         Text(
             "Registrar empleado",
             style = MaterialTheme.typography.titleLarge
@@ -100,7 +141,9 @@ fun EmpleadosScreen(
             value = nombre,
             onValueChange = { nombre = it },
             label = { Text("Nombre") },
+            placeholder = { Text("Ej. Juan") },
             singleLine = true,
+            enabled = negocios.isNotEmpty(),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -109,6 +152,7 @@ fun EmpleadosScreen(
             onValueChange = { apellido = it },
             label = { Text("Apellido paterno") },
             singleLine = true,
+            enabled = negocios.isNotEmpty(),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -117,6 +161,7 @@ fun EmpleadosScreen(
             onValueChange = { apellidoMaterno = it },
             label = { Text("Apellido materno") },
             singleLine = true,
+            enabled = negocios.isNotEmpty(),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -125,6 +170,7 @@ fun EmpleadosScreen(
             onValueChange = { correo = it },
             label = { Text("Correo electrónico") },
             singleLine = true,
+            enabled = negocios.isNotEmpty(),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
             ),
@@ -136,6 +182,7 @@ fun EmpleadosScreen(
             onValueChange = { nombreUsuario = it },
             label = { Text("Nombre de usuario") },
             singleLine = true,
+            enabled = negocios.isNotEmpty(),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -143,7 +190,9 @@ fun EmpleadosScreen(
             value = password,
             onValueChange = { password = it },
             label = { Text("Contraseña") },
+            placeholder = { Text("Mínimo 8 caracteres") },
             singleLine = true,
+            enabled = negocios.isNotEmpty(),
             visualTransformation = if (mostrarPassword)
                 VisualTransformation.None
             else
@@ -164,16 +213,75 @@ fun EmpleadosScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
+        // NEGOCIO ASIGNADO AL NUEVO EMPLEADO
+        Text(
+            "Negocio al que pertenece",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        if (negocios.isEmpty()) {
+            Text(
+                "No tienes negocios activos. Primero registra un negocio.",
+                color = MaterialTheme.colorScheme.error
+            )
+        } else {
+            ExposedDropdownMenuBox(
+                expanded = menuNegociosExpandido,
+                onExpandedChange = {
+                    menuNegociosExpandido = !menuNegociosExpandido
+                }
+            ) {
+                OutlinedTextField(
+                    value = negocioSeleccionado?.nombreComercial ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Seleccionar negocio") },
+                    placeholder = { Text("Elige un negocio") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(
+                            expanded = menuNegociosExpandido
+                        )
+                    },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    singleLine = true
+                )
+
+                ExposedDropdownMenu(
+                    expanded = menuNegociosExpandido,
+                    onDismissRequest = {
+                        menuNegociosExpandido = false
+                    }
+                ) {
+                    negocios.forEach { negocio ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(negocio.nombreComercial)
+                            },
+                            onClick = {
+                                negocioSeleccionadoId = negocio.id
+                                busqueda = ""
+                                mensaje = ""
+                                menuNegociosExpandido = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
         Button(
             onClick = {
                 when (
-                    val resultado = repository.crearEmpleado(
+                    val resultado = usuarioRepository.crearEmpleado(
                         nombre = nombre,
                         apellido = apellido,
                         apellidoMaterno = apellidoMaterno,
                         correo = correo,
                         nombreUsuario = nombreUsuario,
-                        password = password
+                        password = password,
+                        negocioId = negocioSeleccionadoId
                     )
                 ) {
                     is ResultadoEmpleado.Exitoso -> {
@@ -189,6 +297,7 @@ fun EmpleadosScreen(
                     }
                 }
             },
+            enabled = negocioSeleccionadoId > 0,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Registrar empleado")
@@ -206,6 +315,7 @@ fun EmpleadosScreen(
 
         HorizontalDivider()
 
+        // BUSCADOR Y LISTA
         Text(
             "Empleados registrados (${empleados.size})",
             style = MaterialTheme.typography.titleLarge
@@ -220,101 +330,115 @@ fun EmpleadosScreen(
             label = { Text("Buscar empleado") },
             placeholder = { Text("Nombre, correo o usuario") },
             singleLine = true,
+            enabled = negocioSeleccionadoId > 0,
             modifier = Modifier.fillMaxWidth()
         )
 
         if (empleados.isEmpty()) {
             Text(
-                if (busqueda.isBlank())
-                    "Todavía no hay empleados registrados."
+                if (negocioSeleccionadoId > 0)
+                    "Todavía no hay empleados registrados en este negocio."
                 else
-                    "No se encontraron empleados."
+                    "No hay un negocio seleccionado."
             )
-        } else {
-            empleados.forEach { empleado ->
+        }
 
-                Card(
-                    modifier = Modifier.fillMaxWidth()
+        empleados.forEach { empleado ->
+
+            val negocioEmpleado = negocios.firstOrNull {
+                it.id == empleado.negocioId
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+
+                    Text(
+                        listOfNotNull(
+                            empleado.nombre,
+                            empleado.apellido,
+                            empleado.apellidoMaterno
+                        ).joinToString(" "),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text("Usuario: ${empleado.nombreUsuario ?: "Sin usuario"}")
+
+                    Text("Correo: ${empleado.correo}")
+
+                    Text(
+                        if (empleado.activo == 1)
+                            "Estado: Activo"
+                        else
+                            "Estado: Inactivo",
+                        color = if (empleado.activo == 1)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.error
+                    )
+
+                    HorizontalDivider()
+
+                    Text(
+                        "Negocio: ${negocioEmpleado?.nombreComercial ?: "Sin negocio asignado"}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            empleadoEditandoId = empleado.id
+                            editNombre = empleado.nombre.orEmpty()
+                            editApellido = empleado.apellido.orEmpty()
+                            editApellidoMaterno = empleado.apellidoMaterno.orEmpty()
+                            editCorreo = empleado.correo
+                            editNombreUsuario = empleado.nombreUsuario.orEmpty()
+                            editPassword = ""
+                            editNegocioId = empleado.negocioId ?: negocioSeleccionadoId
+
+                            mensajeEdicion = ""
+                            edicionExitosa = false
+                            mostrarPasswordEdicion = false
+                            mostrarDialogoEdicion = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
+                        Text("Editar empleado")
+                    }
 
-                        Text(
-                            listOfNotNull(
-                                empleado.nombre,
-                                empleado.apellido,
-                                empleado.apellidoMaterno
-                            ).joinToString(" "),
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                    OutlinedButton(
+                        onClick = {
+                            val nuevoEstado = empleado.activo != 1
 
-                        Text("Usuario: ${empleado.nombreUsuario ?: "Sin usuario"}")
-                        Text("Correo: ${empleado.correo}")
+                            when (
+                                val resultado = usuarioRepository.cambiarEstadoEmpleado(
+                                    empleado.id,
+                                    nuevoEstado
+                                )
+                            ) {
+                                is ResultadoEmpleado.Exitoso -> {
+                                    mensaje = resultado.mensaje
+                                    operacionExitosa = true
+                                    cargarEmpleados()
+                                }
 
+                                is ResultadoEmpleado.Error -> {
+                                    mensaje = resultado.mensaje
+                                    operacionExitosa = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(
                             if (empleado.activo == 1)
-                                "Estado: Activo"
+                                "Desactivar cuenta"
                             else
-                                "Estado: Inactivo",
-                            color = if (empleado.activo == 1)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.error
+                                "Activar cuenta"
                         )
-
-                        OutlinedButton(
-                            onClick = {
-                                empleadoEditandoId = empleado.id
-                                editNombre = empleado.nombre.orEmpty()
-                                editApellido = empleado.apellido.orEmpty()
-                                editApellidoMaterno = empleado.apellidoMaterno.orEmpty()
-                                editCorreo = empleado.correo
-                                editNombreUsuario = empleado.nombreUsuario.orEmpty()
-                                editPassword = ""
-
-                                mensajeEdicion = ""
-                                edicionExitosa = false
-                                mostrarPasswordEdicion = false
-                                mostrarDialogoEdicion = true
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Editar empleado")
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                val nuevoEstado = empleado.activo != 1
-
-                                when (
-                                    val resultado = repository.cambiarEstadoEmpleado(
-                                        empleado.id,
-                                        nuevoEstado
-                                    )
-                                ) {
-                                    is ResultadoEmpleado.Exitoso -> {
-                                        mensaje = resultado.mensaje
-                                        operacionExitosa = true
-                                        cargarEmpleados()
-                                    }
-
-                                    is ResultadoEmpleado.Error -> {
-                                        mensaje = resultado.mensaje
-                                        operacionExitosa = false
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                if (empleado.activo == 1)
-                                    "Desactivar cuenta"
-                                else
-                                    "Activar cuenta"
-                            )
-                        }
                     }
                 }
             }
@@ -330,7 +454,7 @@ fun EmpleadosScreen(
         }
     }
 
-    // Ventana emergente para editar
+    // VENTANA DE EDICIÓN
     if (mostrarDialogoEdicion) {
         AlertDialog(
             onDismissRequest = {
@@ -347,7 +471,6 @@ fun EmpleadosScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-
                     OutlinedTextField(
                         value = editNombre,
                         onValueChange = { editNombre = it },
@@ -377,9 +500,6 @@ fun EmpleadosScreen(
                         onValueChange = { editCorreo = it },
                         label = { Text("Correo electrónico") },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email
-                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -391,12 +511,61 @@ fun EmpleadosScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    // CAMBIAR NEGOCIO DEL EMPLEADO
+                    Text(
+                        "Negocio al que pertenece",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    ExposedDropdownMenuBox(
+                        expanded = menuEdicionNegociosExpandido,
+                        onExpandedChange = {
+                            menuEdicionNegociosExpandido = !menuEdicionNegociosExpandido
+                        }
+                    ) {
+                        OutlinedTextField(
+                            value = negocios.firstOrNull {
+                                it.id == editNegocioId
+                            }?.nombreComercial ?: "Selecciona un negocio",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Negocio asignado") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(
+                                    expanded = menuEdicionNegociosExpandido
+                                )
+                            },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                            singleLine = true
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = menuEdicionNegociosExpandido,
+                            onDismissRequest = {
+                                menuEdicionNegociosExpandido = false
+                            }
+                        ) {
+                            negocios.forEach { negocio ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(negocio.nombreComercial)
+                                    },
+                                    onClick = {
+                                        editNegocioId = negocio.id
+                                        menuEdicionNegociosExpandido = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
                     OutlinedTextField(
                         value = editPassword,
                         onValueChange = { editPassword = it },
-                        label = { Text("Nueva contraseña (opcional)") },
-                        supportingText = {
-                            Text("Déjala vacía si no deseas cambiarla.")
+                        label = {
+                            Text("Nueva contraseña (opcional)")
                         },
                         singleLine = true,
                         visualTransformation = if (mostrarPasswordEdicion)
@@ -435,21 +604,24 @@ fun EmpleadosScreen(
                     onClick = {
                         val id = empleadoEditandoId
 
-                        if (id != null) {
+                        if (id != null && editNegocioId > 0) {
                             when (
-                                val resultado = repository.actualizarEmpleado(
+                                val resultado = usuarioRepository.actualizarEmpleado(
                                     id = id,
                                     nombre = editNombre,
                                     apellido = editApellido,
                                     apellidoMaterno = editApellidoMaterno,
                                     correo = editCorreo,
                                     nombreUsuario = editNombreUsuario,
-                                    password = editPassword
+                                    password = editPassword,
+                                    negocioId = editNegocioId
                                 )
                             ) {
                                 is ResultadoEmpleado.Exitoso -> {
                                     mensaje = resultado.mensaje
                                     operacionExitosa = true
+
+                                    // Si cambió de negocio, actualizar la lista actual.
                                     cargarEmpleados()
 
                                     mostrarDialogoEdicion = false
@@ -462,6 +634,9 @@ fun EmpleadosScreen(
                                     edicionExitosa = false
                                 }
                             }
+                        } else {
+                            mensajeEdicion = "Selecciona un negocio válido."
+                            edicionExitosa = false
                         }
                     }
                 ) {

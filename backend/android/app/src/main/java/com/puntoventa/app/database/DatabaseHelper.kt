@@ -11,12 +11,11 @@ class DatabaseHelper(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "punto_venta.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
     }
 
     override fun onCreate(db: SQLiteDatabase) {
         // La base existente se copia desde assets.
-     
     }
 
     override fun onUpgrade(
@@ -24,7 +23,30 @@ class DatabaseHelper(context: Context) :
         oldVersion: Int,
         newVersion: Int
     ) {
-        //  migraciones cuando sean necesarias.
+        if (oldVersion < 3) {
+            var existeNegocioId = false
+
+            db.rawQuery("PRAGMA table_info(usuarios)", null).use { cursor ->
+                val indiceNombre = cursor.getColumnIndexOrThrow("name")
+
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(indiceNombre) == "negocio_id") {
+                        existeNegocioId = true
+                        break
+                    }
+                }
+            }
+
+            if (!existeNegocioId) {
+                db.execSQL(
+                    """
+                    ALTER TABLE usuarios
+                    ADD COLUMN negocio_id INTEGER
+                    REFERENCES negocios(negocio_id)
+                    """.trimIndent()
+                )
+            }
+        }
     }
 
     init {

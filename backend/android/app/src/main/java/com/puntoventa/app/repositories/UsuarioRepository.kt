@@ -19,7 +19,7 @@ class UsuarioRepository(
             SELECT usuario_id, usuario_correo, usuario_password,
                    rol_id, usuario_activo, usuario_nombre,
                    usuario_apellido, usuario_apellido_materno,
-                   usuario_nombre_usuario
+                   usuario_nombre_usuario, negocio_id
             FROM usuarios
             ORDER BY usuario_id
             """.trimIndent(),
@@ -38,7 +38,8 @@ class UsuarioRepository(
                         nombre = it.getString(5),
                         apellido = it.getString(6),
                         apellidoMaterno = it.getString(7),
-                        nombreUsuario = it.getString(8)
+                        nombreUsuario = it.getString(8),
+                        negocioId = if (it.isNull(9)) null else it.getInt(9)
                     )
                 )
             }
@@ -55,7 +56,7 @@ class UsuarioRepository(
             SELECT usuario_id, usuario_correo, usuario_password,
                    rol_id, usuario_activo, usuario_nombre,
                    usuario_apellido, usuario_apellido_materno,
-                   usuario_nombre_usuario
+                   usuario_nombre_usuario, negocio_id
             FROM usuarios
             WHERE usuario_correo = ?
             LIMIT 1
@@ -74,7 +75,8 @@ class UsuarioRepository(
                     nombre = it.getString(5),
                     apellido = it.getString(6),
                     apellidoMaterno = it.getString(7),
-                    nombreUsuario = it.getString(8)
+                    nombreUsuario = it.getString(8),
+                    negocioId = if (it.isNull(9)) null else it.getInt(9)
                 )
             }
         }
@@ -82,7 +84,10 @@ class UsuarioRepository(
         return null
     }
 
-    fun buscarEmpleados(termino: String): List<Usuario> {
+    fun buscarEmpleados(
+        termino: String,
+        negocioId: Int
+    ): List<Usuario> {
         val db = databaseHelper.readableDatabase
         val empleados = mutableListOf<Usuario>()
         val busqueda = "%${termino.trim()}%"
@@ -92,9 +97,10 @@ class UsuarioRepository(
             SELECT usuario_id, usuario_correo, usuario_password,
                    rol_id, usuario_activo, usuario_nombre,
                    usuario_apellido, usuario_apellido_materno,
-                   usuario_nombre_usuario
+                   usuario_nombre_usuario, negocio_id
             FROM usuarios
             WHERE rol_id = 2
+              AND negocio_id = ?
               AND (
                   usuario_nombre LIKE ?
                   OR usuario_apellido LIKE ?
@@ -104,7 +110,14 @@ class UsuarioRepository(
               )
             ORDER BY usuario_nombre
             """.trimIndent(),
-            arrayOf(busqueda, busqueda, busqueda, busqueda, busqueda)
+            arrayOf(
+                negocioId.toString(),
+                busqueda,
+                busqueda,
+                busqueda,
+                busqueda,
+                busqueda
+            )
         )
 
         cursor.use {
@@ -119,7 +132,8 @@ class UsuarioRepository(
                         nombre = it.getString(5),
                         apellido = it.getString(6),
                         apellidoMaterno = it.getString(7),
-                        nombreUsuario = it.getString(8)
+                        nombreUsuario = it.getString(8),
+                        negocioId = if (it.isNull(9)) null else it.getInt(9)
                     )
                 )
             }
@@ -134,7 +148,8 @@ class UsuarioRepository(
         apellidoMaterno: String,
         correo: String,
         nombreUsuario: String,
-        password: String
+        password: String,
+        negocioId: Int
     ): ResultadoEmpleado {
 
         val nombreLimpio = nombre.trim()
@@ -169,6 +184,19 @@ class UsuarioRepository(
         }
 
         val db = databaseHelper.writableDatabase
+
+        val negocioValido = db.rawQuery(
+            """
+            SELECT negocio_id FROM negocios
+            WHERE negocio_id = ? AND negocio_activo = 1
+            LIMIT 1
+            """.trimIndent(),
+            arrayOf(negocioId.toString())
+        ).use { it.moveToFirst() }
+
+        if (!negocioValido) {
+            return ResultadoEmpleado.Error("Selecciona un negocio válido y activo")
+        }
 
         val existeCorreo = db.rawQuery(
             """
@@ -205,6 +233,7 @@ class UsuarioRepository(
             put("usuario_apellido", apellidoLimpio)
             put("usuario_apellido_materno", apellidoMaternoLimpio)
             put("usuario_nombre_usuario", usuarioLimpio)
+            put("negocio_id", negocioId)
         }
 
         val nuevoId = db.insert("usuarios", null, valores)
@@ -223,7 +252,8 @@ class UsuarioRepository(
         apellidoMaterno: String,
         correo: String,
         nombreUsuario: String,
-        password: String
+        password: String,
+        negocioId: Int
     ): ResultadoEmpleado {
 
         val nombreLimpio = nombre.trim()
@@ -257,6 +287,19 @@ class UsuarioRepository(
         }
 
         val db = databaseHelper.writableDatabase
+
+        val negocioValido = db.rawQuery(
+            """
+            SELECT negocio_id FROM negocios
+            WHERE negocio_id = ? AND negocio_activo = 1
+            LIMIT 1
+            """.trimIndent(),
+            arrayOf(negocioId.toString())
+        ).use { it.moveToFirst() }
+
+        if (!negocioValido) {
+            return ResultadoEmpleado.Error("Selecciona un negocio válido y activo")
+        }
 
         val existeCorreo = db.rawQuery(
             """
@@ -292,6 +335,7 @@ class UsuarioRepository(
             put("usuario_apellido_materno", apellidoMaternoLimpio)
             put("usuario_correo", correoLimpio)
             put("usuario_nombre_usuario", usuarioLimpio)
+            put("negocio_id", negocioId)
 
             if (password.isNotBlank()) {
                 put("usuario_password", password)

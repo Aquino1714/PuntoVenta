@@ -5,8 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,10 +24,6 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import com.puntoventa.app.database.DatabaseHelper
 import com.puntoventa.app.repositories.AuthRepository
 import com.puntoventa.app.repositories.ResultadoLogin
@@ -37,6 +31,7 @@ import com.puntoventa.app.repositories.ResultadoRegistro
 import com.puntoventa.app.services.Permisos
 import com.puntoventa.app.ui.theme.PuntoVentaTheme
 import com.puntoventa.app.screens.EmpleadosScreen
+import com.puntoventa.app.screens.NegociosScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -60,11 +55,13 @@ class MainActivity : ComponentActivity() {
                 var confirmarPassword by remember { mutableStateOf("") }
 
                 var mostrarPasswordLogin by remember { mutableStateOf(false) }
+                var mostrarPasswordRegistro by remember { mutableStateOf(false) }
 
                 var mensaje by remember { mutableStateOf("") }
                 var registroExitoso by remember { mutableStateOf(false) }
                 var correoSesion by remember { mutableStateOf("") }
                 var rolSesion by remember { mutableIntStateOf(0) }
+                var idSesion by remember { mutableIntStateOf(0) }
 
                 var errorNombre by remember { mutableStateOf("") }
                 var errorApellido by remember { mutableStateOf("") }
@@ -75,8 +72,8 @@ class MainActivity : ComponentActivity() {
 
                 fun cerrarSesion() {
                     correoSesion = ""
+                    idSesion = 0
                     rolSesion = 0
-                    correo = ""
                     usuario = ""
                     password = ""
                     mensaje = ""
@@ -105,6 +102,7 @@ class MainActivity : ComponentActivity() {
                             if (resultado.rolId != tipoRol) {
                                 mensaje = "Esta cuenta no corresponde a este acceso"
                             } else {
+                                idSesion = resultado.id
                                 correoSesion = resultado.correo
                                 rolSesion = resultado.rolId
                                 password = ""
@@ -122,7 +120,6 @@ class MainActivity : ComponentActivity() {
                 }
 
                 fun validarFormularioRegistro(): Boolean {
-
                     errorNombre = ""
                     errorApellido = ""
                     errorApellidoMaterno = ""
@@ -185,7 +182,6 @@ class MainActivity : ComponentActivity() {
                 }
 
                 fun registrarAdministrador() {
-
                     if (!validarFormularioRegistro()) {
                         registroExitoso = false
                         return
@@ -224,7 +220,6 @@ class MainActivity : ComponentActivity() {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
@@ -240,11 +235,9 @@ class MainActivity : ComponentActivity() {
                                 )
 
                                 Spacer(Modifier.height(16.dp))
-
                                 Text("Todos tus negocios en una App")
 
                                 Spacer(Modifier.height(32.dp))
-
                                 Text("¿Eres administrador?")
 
                                 Spacer(Modifier.height(12.dp))
@@ -271,7 +264,6 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 Spacer(Modifier.height(24.dp))
-
                                 Text("¿Eres empleado?")
 
                                 Spacer(Modifier.height(12.dp))
@@ -284,6 +276,17 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text("Iniciar sesión con cuenta empleado")
+                                }
+
+                                Spacer(Modifier.height(24.dp))
+
+                                OutlinedButton(
+                                    onClick = {
+                                        finish()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Salir de la aplicación")
                                 }
                             }
 
@@ -467,7 +470,26 @@ class MainActivity : ComponentActivity() {
                                     supportingText = {
                                         if (errorPassword.isNotEmpty()) Text(errorPassword)
                                     },
-                                    visualTransformation = PasswordVisualTransformation(),
+                                    visualTransformation = if (mostrarPasswordRegistro)
+                                        VisualTransformation.None
+                                    else
+                                        PasswordVisualTransformation(),
+                                    trailingIcon = {
+                                        IconButton(
+                                            onClick = {
+                                                mostrarPasswordRegistro =
+                                                    !mostrarPasswordRegistro
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = if (mostrarPasswordRegistro)
+                                                    Icons.Filled.VisibilityOff
+                                                else
+                                                    Icons.Filled.Visibility,
+                                                contentDescription = "Mostrar u ocultar contraseña"
+                                            )
+                                        }
+                                    },
                                     modifier = Modifier.fillMaxWidth()
                                 )
 
@@ -659,7 +681,13 @@ class MainActivity : ComponentActivity() {
                                     }
 
                                     "Negocios" -> {
-                                        Text("Gestión de negocios: módulo en desarrollo")
+                                        NegociosScreen(
+                                            administradorId = idSesion,
+                                            onRegresar = {
+                                                moduloSeleccionado = "Inicio"
+                                                mensaje = ""
+                                            }
+                                        )
                                     }
 
                                     "Productos" -> {
@@ -719,7 +747,8 @@ class MainActivity : ComponentActivity() {
                                             "Inicio",
                                             "Usuarios",
                                             "Negocios",
-                                            "Más"
+                                            "Más",
+                                            "Perfil"
                                         )
                                     } else {
                                         listOf(
@@ -763,6 +792,7 @@ class MainActivity : ComponentActivity() {
                             // EMPLEADOS
                             "empleados" -> {
                                 EmpleadosScreen(
+                                    administradorId = idSesion,
                                     onRegresar = {
                                         pantalla = "menu"
                                         moduloSeleccionado = "Usuarios"
