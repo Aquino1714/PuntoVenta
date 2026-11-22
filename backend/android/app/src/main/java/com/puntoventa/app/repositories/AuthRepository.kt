@@ -4,6 +4,7 @@ package com.puntoventa.app.repositories
 import android.content.ContentValues
 import android.util.Patterns
 import com.puntoventa.app.database.DatabaseHelper
+import com.puntoventa.app.services.PasswordHasher
 
 class AuthRepository(
     private val databaseHelper: DatabaseHelper
@@ -16,7 +17,13 @@ class AuthRepository(
 
         val db = databaseHelper.readableDatabase
 
-        val cursor = db.rawQuery(
+        var id = 0
+        var correo = ""
+        var passwordGuardada = ""
+        var rolId = 0
+        var activo = 0
+
+        db.rawQuery(
             """
             SELECT usuario_id, usuario_correo, usuario_password,
                    rol_id, usuario_activo
@@ -25,29 +32,64 @@ class AuthRepository(
             LIMIT 1
             """.trimIndent(),
             arrayOf(identificador.trim(), identificador.trim())
-        )
+        ).use { cursor ->
 
-        cursor.use {
-            if (!it.moveToFirst()) {
+            if (!cursor.moveToFirst()) {
                 return ResultadoLogin.Error("Usuario no registrado")
             }
 
-            val id = it.getInt(0)
-            val correo = it.getString(1)
-            val passwordGuardada = it.getString(2)
-            val rolId = it.getInt(3)
-            val activo = it.getInt(4)
-
-            if (activo != 1) {
-                return ResultadoLogin.Error("La cuenta está inactiva")
-            }
-
-            if (passwordGuardada != password) {
-                return ResultadoLogin.Error("Contraseña incorrecta")
-            }
-
-            return ResultadoLogin.Exitoso(id, correo, rolId)
+            id = cursor.getInt(0)
+            correo = cursor.getString(1)
+            passwordGuardada = cursor.getString(2)
+            rolId = cursor.getInt(3)
+            activo = cursor.getInt(4)
         }
+
+        if (activo != 1) {
+            return ResultadoLogin.Error("La cuenta está inactiva")
+        }
+
+        // 1. Verificar contraseña según el formato almacenado.
+        val esHash = PasswordHasher.esHash(passwordGuardada)
+
+        val passwordCorrecta = if (esHash) {
+            PasswordHasher.verificarPassword(
+                password,
+                passwordGuardada
+            )
+        } else {
+            // Compatibilidad con cuentas antiguas.
+            passwordGuardada == password
+        }
+
+        if (!passwordCorrecta) {
+            return ResultadoLogin.Error("Contraseña incorrecta")
+        }
+
+        // 2. Si era una contraseña antigua, actualizarla a hash.
+        if (!esHash) {
+            val valores = ContentValues().apply {
+                put(
+                    "usuario_password",
+                    PasswordHasher.generarHash(password)
+                )
+            }
+
+            val filasActualizadas = databaseHelper.writableDatabase.update(
+                "usuarios",
+                valores,
+                "usuario_id = ?",
+                arrayOf(id.toString())
+            )
+
+            if (filasActualizadas != 1) {
+                return ResultadoLogin.Error(
+                    "No se pudo actualizar la seguridad de la contraseña"
+                )
+            }
+        }
+
+        return ResultadoLogin.Exitoso(id, correo, rolId)
     }
 
     fun registrarAdministrador(
@@ -152,10 +194,10 @@ class AuthRepository(
                 )
             }
 
-            // 1. Crear administrador
+            // 1. Crear administrador con contraseña protegida.
             val valoresUsuario = ContentValues().apply {
                 put("usuario_correo", correoLimpio)
-                put("usuario_password", password)
+                put("usuario_password", PasswordHasher.generarHash(password))
                 put("rol_id", 1)
                 put("usuario_activo", 1)
                 put("usuario_nombre", nombreLimpio)
@@ -171,7 +213,7 @@ class AuthRepository(
                 )
             }
 
-            // 2. Crear negocio principal del administrador
+            // 2. Crear negocio principal del administrador.
             val valoresNegocio = ContentValues().apply {
                 put("negocio_nombre_comercial", negocioLimpio)
                 put("negocio_es_principal", 1)
@@ -191,7 +233,7 @@ class AuthRepository(
                 )
             }
 
-            // 3. Relacionar administrador con su negocio
+            // 3. Relacionar administrador con su negocio.
             val actualizarUsuario = ContentValues().apply {
                 put("negocio_id", nuevoNegocioId)
             }
